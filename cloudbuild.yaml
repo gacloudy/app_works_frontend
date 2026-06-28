@@ -8,3 +8,7 @@ steps:
 
 images:
   - 'asia-northeast1-docker.pkg.dev/$PROJECT_ID/trader-frontend/app:latest'
+
+options:
+  logging: LEGACY
+  default_logs_bucket_behavior: REGIONAL_USER_OWNED_BUCKET
