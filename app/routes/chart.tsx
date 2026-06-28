@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useLoaderData, useNavigate } from "react-router";
+import { API_BASE } from "../api";
 import {
   createChart,
   CandlestickSeries,
@@ -63,7 +64,7 @@ export async function loader({ request }: { request: Request }) {
   const days = Number(url.searchParams.get("days") ?? 60);
 
   const stocksRes = await fetch(
-    "http://localhost:8000/api/v1/stock-master/?is_delisted=false"
+    `${API_BASE}/api/v1/stock-master/?is_delisted=false`
   );
   if (!stocksRes.ok) throw new Response("銘柄一覧の取得に失敗", { status: stocksRes.status });
   const stocks: Stock[] = await stocksRes.json();
@@ -71,7 +72,7 @@ export async function loader({ request }: { request: Request }) {
   let history: PriceRecord[] = [];
   if (code) {
     const histRes = await fetch(
-      `http://localhost:8000/api/v1/stock-price/${code}/history?days=${days}`
+      `${API_BASE}/api/v1/stock-price/${code}/history?days=${days}`
     );
     if (histRes.ok) history = await histRes.json();
   }
