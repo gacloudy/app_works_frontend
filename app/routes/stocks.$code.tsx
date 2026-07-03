@@ -1,6 +1,6 @@
 import { Link, useLoaderData } from "react-router";
 import type { Route } from "./+types/stocks.$code";
-import { API_BASE } from "../api";
+import { backendFetch } from "../utils/backend.server";
 
 export function meta({ data }: Route.MetaArgs) {
   const name = data?.stock?.name ?? "";
@@ -30,8 +30,8 @@ interface PriceData {
 
 export async function loader({ params }: Route.LoaderArgs) {
   const [stockRes, priceRes] = await Promise.all([
-    fetch(`${API_BASE}/api/v1/stock-master/${params.code}`),
-    fetch(`${API_BASE}/api/v1/stock-price/${params.code}/latest`),
+    backendFetch(`/api/v1/stock-master/${params.code}`),
+    backendFetch(`/api/v1/stock-price/${params.code}/latest`),
   ]);
 
   if (stockRes.status === 404) throw new Response("銘柄が見つかりません", { status: 404 });

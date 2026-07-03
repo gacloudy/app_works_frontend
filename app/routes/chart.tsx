@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useLoaderData, useNavigate } from "react-router";
-import { API_BASE } from "../api";
+import { backendFetch } from "../utils/backend.server";
 import {
   createChart,
   CandlestickSeries,
@@ -63,17 +63,13 @@ export async function loader({ request }: { request: Request }) {
   const code = url.searchParams.get("code") ?? "";
   const days = Number(url.searchParams.get("days") ?? 60);
 
-  const stocksRes = await fetch(
-    `${API_BASE}/api/v1/stock-master/?is_delisted=false`
-  );
+  const stocksRes = await backendFetch("/api/v1/stock-master/?is_delisted=false");
   if (!stocksRes.ok) throw new Response("銘柄一覧の取得に失敗", { status: stocksRes.status });
   const stocks: Stock[] = await stocksRes.json();
 
   let history: PriceRecord[] = [];
   if (code) {
-    const histRes = await fetch(
-      `${API_BASE}/api/v1/stock-price/${code}/history?days=${days}`
-    );
+    const histRes = await backendFetch(`/api/v1/stock-price/${code}/history?days=${days}`);
     if (histRes.ok) history = await histRes.json();
   }
 

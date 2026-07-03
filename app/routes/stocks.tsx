@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useLoaderData } from "react-router";
-import { API_BASE } from "../api";
+import { backendFetch } from "../utils/backend.server";
 
 export function meta() {
   return [{ title: "銘柄一覧 | 株価分析" }];
@@ -24,8 +24,8 @@ interface LatestPrice {
 
 export async function loader() {
   const [stocksRes, pricesRes] = await Promise.all([
-    fetch(`${API_BASE}/api/v1/stock-master/`),
-    fetch(`${API_BASE}/api/v1/stock-price/latest`),
+    backendFetch("/api/v1/stock-master/"),
+    backendFetch("/api/v1/stock-price/latest"),
   ]);
   if (!stocksRes.ok) throw new Response("取得失敗", { status: stocksRes.status });
 
