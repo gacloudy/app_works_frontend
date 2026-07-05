@@ -139,7 +139,7 @@ export default function Chat() {
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-gray-100 dark:bg-gray-900">
       <div className="flex items-center justify-between bg-black px-6 py-4">
-        <h2 className="text-2xl font-bold text-white">
+        <h2 className="text-xl font-bold text-white">
           💸株本赤音ちゃん💸
         </h2>
         <button
@@ -148,7 +148,7 @@ export default function Chat() {
           disabled={messages.length === 0 || isLoading}
           className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >
-          会話をリセット
+          ×リセット
         </button>
       </div>
 
@@ -165,7 +165,7 @@ export default function Chat() {
         />
 
         <div className="flex-1 min-h-0 rounded-xl flex flex-col overflow-hidden h-[calc(100%-10px)]">
-          <div className="flex-1 overflow-y-auto p-6 pb-24 space-y-4">
+          <div className="flex-1 overflow-y-auto py-6 pb-24 space-y-4">
             {messages.length === 0 ? (
               <div className="text-gray-700 text-lg text-center py-12">
                 赤音ちゃんに、銘柄の売り時・買い時などを質問してみよう！！
@@ -203,7 +203,7 @@ export default function Chat() {
                   className="lg:hidden w-12 h-12 rounded-full object-cover border border-gray-300 dark:border-gray-600 shrink-0"
                 />
                 <div className="max-w-[80%] px-4 py-2.5 rounded-2xl rounded-bl-sm text-sm bg-pink-700 text-white">
-                  入力中...
+                  えっと...
                 </div>
               </div>
             )}
