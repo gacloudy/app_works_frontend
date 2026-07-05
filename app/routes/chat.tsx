@@ -32,6 +32,7 @@ export async function action({ request }: Route.ActionArgs) {
 }
 
 const TALK_SWAP_INTERVAL_MS = 500;
+const MAX_TEXTAREA_LINES = 5;
 
 export default function Chat() {
   const fetcher = useFetcher<typeof action>();
@@ -40,6 +41,7 @@ export default function Chat() {
   const [isTalking, setIsTalking] = useState(false);
   const [talkFrame, setTalkFrame] = useState<0 | 1>(0);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const talkIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const talkTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -77,6 +79,28 @@ export default function Chat() {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isLoading]);
 
+  // 実際のフォント指標から「5行ぶんの高さ」を計算し、6行目からスクロールバーが出るようにする
+  useEffect(() => {
+    const el = textareaRef.current;
+    if (!el) return;
+    const style = window.getComputedStyle(el);
+    const lineHeight = parseFloat(style.lineHeight);
+    const verticalExtras =
+      parseFloat(style.paddingTop) +
+      parseFloat(style.paddingBottom) +
+      parseFloat(style.borderTopWidth) +
+      parseFloat(style.borderBottomWidth);
+    el.style.maxHeight = `${lineHeight * MAX_TEXTAREA_LINES + verticalExtras}px`;
+  }, []);
+
+  // 改行に合わせてテキストエリアの高さを自動調整する（最大高さは上記で設定したmax-heightでクランプ）
+  useEffect(() => {
+    const el = textareaRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${el.scrollHeight}px`;
+  }, [input]);
+
   // AIの返答が届いたら、返答の長さに応じた時間だけ画像を切り替えて喋っているように見せる
   useEffect(() => {
     const last = messages.at(-1);
@@ -113,9 +137,9 @@ export default function Chat() {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-gray-100 dark:bg-gray-900 p-6">
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100">
+    <div className="flex flex-col h-screen overflow-hidden bg-gray-100 dark:bg-gray-900">
+      <div className="flex items-center justify-between bg-black px-6 py-4">
+        <h2 className="text-2xl font-bold text-white">
           株本赤音ちゃん
         </h2>
         <button
@@ -128,30 +152,42 @@ export default function Chat() {
         </button>
       </div>
 
-      <div className="flex-1 flex gap-6 overflow-hidden">
+      <div
+        className="flex-1 min-h-0 flex gap-6 p-2 pb-16 relative bg-no-repeat bg-cover bg-center]"
+        style={{ backgroundImage: "url(/background.png)" }}
+      >
+        {/* 画像分の横幅を確保するダミー要素（画像自体はabsoluteでフッターに重ねる） */}
+        <div className="hidden lg:block w-48 shrink-0" />
         <img
-          src="/akane-chan.png"
+          src={isTalking && talkFrame === 1 ? "/akane-chan-talk.png" : "/akane-chan.png"}
           alt="株本赤音ちゃん"
-          className="hidden lg:block h-full w-auto object-contain shrink-0"
+          className="hidden lg:block absolute left-5 top-[-5px] h-[calc(100%-5px)] w-auto object-contain z-20"
         />
 
-        <div className="flex-1 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 flex flex-col overflow-hidden">
-          <div className="flex-1 overflow-y-auto p-6 space-y-4">
+        <div className="flex-1 min-h-0 rounded-xl flex flex-col overflow-hidden h-[calc(100%-10px)]">
+          <div className="flex-1 overflow-y-auto p-6 pb-24 space-y-4">
             {messages.length === 0 ? (
-              <div className="text-gray-400 dark:text-gray-500 text-sm text-center py-12">
+              <div className="text-gray-700 text-lg text-center py-12">
                 赤音ちゃんに、銘柄の売り時・買い時などを質問してみよう！！
               </div>
             ) : (
               messages.map((m, i) => (
                 <div
                   key={i}
-                  className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}
+                  className={`flex items-end gap-2 ${m.role === "user" ? "justify-end" : "justify-start"}`}
                 >
+                  {m.role === "assistant" && (
+                    <img
+                      src="/akane-chan-icon.png"
+                      alt="株本赤音ちゃん"
+                      className="lg:hidden w-12 h-12 rounded-full object-cover border border-gray-300 dark:border-gray-600 shrink-0"
+                    />
+                  )}
                   <div
-                    className={`max-w-lg px-4 py-2.5 rounded-2xl text-sm whitespace-pre-wrap ${
+                    className={`max-w-[80%] px-4 py-2.5 rounded-2xl text-sm whitespace-pre-wrap break-words ${
                       m.role === "user"
                         ? "bg-blue-600 text-white rounded-br-sm"
-                        : "bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-100 rounded-bl-sm"
+                        : "bg-pink-700 text-white rounded-bl-sm"
                     }`}
                   >
                     {m.content}
@@ -160,37 +196,43 @@ export default function Chat() {
               ))
             )}
             {isLoading && (
-              <div className="flex justify-start">
-                <div className="max-w-lg px-4 py-2.5 rounded-2xl rounded-bl-sm text-sm bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500">
+              <div className="flex items-end gap-2 justify-start">
+                <img
+                  src="/akane-chan-icon.png"
+                  alt="株本赤音ちゃん"
+                  className="lg:hidden w-12 h-12 rounded-full object-cover border border-gray-300 dark:border-gray-600 shrink-0"
+                />
+                <div className="max-w-[80%] px-4 py-2.5 rounded-2xl rounded-bl-sm text-sm bg-pink-700 text-white">
                   入力中...
                 </div>
               </div>
             )}
             <div ref={bottomRef} />
           </div>
-
-          <form
-            onSubmit={handleSubmit}
-            className="border-t border-gray-200 dark:border-gray-700 p-3 flex gap-2"
-          >
-            <input
-              type="text"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              maxLength={200}
-              placeholder="例: トヨタ自動車は今売り時ですか?"
-              className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-            <button
-              type="submit"
-              disabled={isLoading || !input.trim()}
-              className="px-5 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              送信
-            </button>
-          </form>
         </div>
       </div>
+
+      <form
+        onSubmit={handleSubmit}
+        className="lg:rounded-lg fixed lg:bottom-2 bottom-0  left-0 right-0 lg:left-[14rem] lg:right-2 z-10 bg-gray-400 border-t border-gray-300 dark:border-gray-700 p-3 flex items-end gap-2"
+      >
+        <textarea
+          ref={textareaRef}
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          maxLength={200}
+          rows={1}
+          placeholder="例: トヨタ自動車は今売り時ですか?"
+          className="flex-1 resize-none break-words leading-5 overflow-y-auto px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+        <button
+          type="submit"
+          disabled={isLoading || !input.trim()}
+          className="shrink-0 px-5 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        >
+          送信
+        </button>
+      </form>
     </div>
   );
 }
