@@ -30,7 +30,7 @@ const navItems = [
   },
   {
     to: "/chat",
-    label: "チャット",
+    label: "株本赤音",
     icon: (
       <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8-1.208 0-2.360-.212-3.412-.598L3 21l1.598-4.588A7.96 7.96 0 013 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
