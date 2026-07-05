@@ -140,7 +140,7 @@ export default function Chat() {
     <div className="flex flex-col h-screen overflow-hidden bg-gray-100 dark:bg-gray-900">
       <div className="flex items-center justify-between bg-black px-6 py-4">
         <h2 className="text-2xl font-bold text-white">
-          株本赤音ちゃん
+          💸株本赤音ちゃん💸
         </h2>
         <button
           type="button"

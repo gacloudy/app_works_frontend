@@ -2,7 +2,7 @@ import { NavLink, Outlet } from "react-router";
 
 const navItems = [
   {
-    to: "/",
+    to: "/dashboard",
     label: "ダッシュボード",
     icon: (
       <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -29,7 +29,7 @@ const navItems = [
     ),
   },
   {
-    to: "/chat",
+    to: "/",
     label: "株本赤音",
     icon: (
       <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
