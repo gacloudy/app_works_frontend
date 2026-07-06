@@ -240,7 +240,7 @@ export default function Chat() {
             maxLength={200}
             rows={1}
             placeholder="例: トヨタ自動車は今売り時ですか?"
-            className="w-full resize-none break-words leading-5 overflow-y-auto pl-4 pr-10 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full resize-none break-words leading-5 overflow-y-auto pl-4 pr-10 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-base lg:text-sm bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
           {input && (
             <button
