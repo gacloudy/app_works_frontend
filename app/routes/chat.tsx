@@ -188,7 +188,7 @@ export default function Chat() {
             className="lg:hidden absolute inset-0 w-full h-full object-cover object-top"
           />
           <div className="lg:hidden absolute inset-0 bg-white/50 " />
-          <div className="relative z-10 flex-1 overflow-y-auto py-6 pb-24 space-y-4">
+          <div className="relative z-10 flex-1 overflow-y-auto px-2 py-6 pb-24 space-y-4">
             {messages.length === 0 ? (
               <div className="text-gray-700 text-lg text-center py-12">
                 　赤音ちゃんに、銘柄の売り時・買い時などを<br />質問してみよう！！　
@@ -202,8 +202,8 @@ export default function Chat() {
                   <div
                     className={`max-w-[80%] px-4 py-2.5 rounded-2xl text-sm whitespace-pre-wrap break-words ${
                       m.role === "user"
-                        ? "bg-blue-600 text-white rounded-br-sm"
-                        : "bg-pink-700 text-white rounded-bl-sm"
+                        ? "bg-blue-600 text-white rounded-br-sm mr-2"
+                        : "bg-pink-700 text-white rounded-bl-sm ml-2"
                     }`}
                   >
                     {m.content}
