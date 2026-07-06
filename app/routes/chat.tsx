@@ -47,8 +47,7 @@ export default function Chat() {
 
   const isLoading = fetcher.state !== "idle";
 
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  function submitMessage() {
     const text = input.trim();
     if (!text || isLoading) return;
 
@@ -60,6 +59,19 @@ export default function Chat() {
       { message: text, history: JSON.stringify(historyForRequest) },
       { method: "post" }
     );
+  }
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    submitMessage();
+  }
+
+  function handleTextareaKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
+    // Shift+Enterは改行、Enter単体は送信（IME変換確定時のEnterは無視する）
+    if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
+      e.preventDefault();
+      submitMessage();
+    }
   }
 
   useEffect(() => {
@@ -79,7 +91,7 @@ export default function Chat() {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isLoading]);
 
-  // 実際のフォント指標から「5行ぶんの高さ」を計算し、6行目からスクロールバーが出るようにする
+  // 実際のフォント指標から「4行ぶんの高さ」を計算し、5行目からスクロールバーが出るようにする
   useEffect(() => {
     const el = textareaRef.current;
     if (!el) return;
@@ -90,15 +102,20 @@ export default function Chat() {
       parseFloat(style.paddingBottom) +
       parseFloat(style.borderTopWidth) +
       parseFloat(style.borderBottomWidth);
-    el.style.maxHeight = `${lineHeight * MAX_TEXTAREA_LINES + verticalExtras}px`;
+    el.style.maxHeight = `${lineHeight * (MAX_TEXTAREA_LINES - 1) + verticalExtras}px`;
   }, []);
 
   // 改行に合わせてテキストエリアの高さを自動調整する（最大高さは上記で設定したmax-heightでクランプ）
   useEffect(() => {
     const el = textareaRef.current;
     if (!el) return;
+    const style = window.getComputedStyle(el);
+    // box-sizing: border-box のため、scrollHeight（ボーダー分を含まない）に
+    // ボーダー幅を足してからheightに設定しないと、常に数px分あふれてスクロールバーが出てしまう
+    const borderExtras =
+      parseFloat(style.borderTopWidth) + parseFloat(style.borderBottomWidth);
     el.style.height = "auto";
-    el.style.height = `${el.scrollHeight}px`;
+    el.style.height = `${el.scrollHeight + borderExtras}px`;
   }, [input]);
 
   // AIの返答が届いたら、返答の長さに応じた時間だけ画像を切り替えて喋っているように見せる
@@ -138,7 +155,7 @@ export default function Chat() {
 
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-gray-100 dark:bg-gray-900">
-      <div className="flex items-center justify-between bg-black px-6 py-4">
+      <div className="fixed top-0 inset-x-0 z-30 h-16 flex items-center justify-between bg-black px-6">
         <h2 className="text-xl font-bold text-white">
           💸株本赤音ちゃん💸
         </h2>
@@ -153,7 +170,7 @@ export default function Chat() {
       </div>
 
       <div
-        className="flex-1 min-h-0 flex gap-6 p-2 pb-16 relative bg-no-repeat bg-cover bg-center]"
+        className="flex-1 min-h-0 flex gap-6 p-2 pb-16 pt-16 relative bg-no-repeat bg-cover bg-center]"
         style={{ backgroundImage: "url(/background.png)" }}
       >
         {/* 画像分の横幅を確保するダミー要素（画像自体はabsoluteでフッターに重ねる） */}
@@ -161,7 +178,7 @@ export default function Chat() {
         <img
           src={isTalking && talkFrame === 1 ? "/akane-chan-talk.png" : "/akane-chan.png"}
           alt="株本赤音ちゃん"
-          className="hidden lg:block absolute left-5 top-[-5px] h-[calc(100%-5px)] w-auto object-contain z-20"
+          className="hidden lg:block absolute left-5 top-[calc(4rem-5px)] h-[calc(100%-4rem)] w-auto object-contain z-50"
         />
 
         <div className="flex-1 min-h-0 rounded-xl flex flex-col overflow-hidden h-[calc(100%-10px)]">
@@ -180,7 +197,7 @@ export default function Chat() {
                     <img
                       src="/akane-chan-icon.png"
                       alt="株本赤音ちゃん"
-                      className="lg:hidden w-12 h-12 rounded-full object-cover border border-gray-300 dark:border-gray-600 shrink-0"
+                      className="lg:hidden w-12 h-12 rounded-full object-cover border border-gray-300 dark:border-gray-600 shrink-0 z-50"
                     />
                   )}
                   <div
@@ -200,7 +217,7 @@ export default function Chat() {
                 <img
                   src="/akane-chan-icon.png"
                   alt="株本赤音ちゃん"
-                  className="lg:hidden w-12 h-12 rounded-full object-cover border border-gray-300 dark:border-gray-600 shrink-0"
+                  className="lg:hidden w-12 h-12 rounded-full object-cover border border-gray-300 dark:border-gray-600 shrink-0 z-50"
                 />
                 <div className="max-w-[80%] px-4 py-2.5 rounded-2xl rounded-bl-sm text-sm bg-pink-700 text-white">
                   えっと...
@@ -216,19 +233,35 @@ export default function Chat() {
         onSubmit={handleSubmit}
         className="lg:rounded-lg fixed lg:bottom-2 bottom-0  left-0 right-0 lg:left-[14rem] lg:right-2 z-10 bg-gray-400 border-t border-gray-300 dark:border-gray-700 p-3 flex items-end gap-2"
       >
-        <textarea
-          ref={textareaRef}
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          maxLength={200}
-          rows={1}
-          placeholder="例: トヨタ自動車は今売り時ですか?"
-          className="flex-1 resize-none break-words leading-5 overflow-y-auto px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
+        <div className="relative flex-1">
+          <textarea
+            ref={textareaRef}
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={handleTextareaKeyDown}
+            maxLength={200}
+            rows={1}
+            placeholder="例: トヨタ自動車は今売り時ですか?"
+            className="w-full resize-none break-words leading-5 overflow-y-auto pl-4 pr-10 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+          {input && (
+            <button
+              type="button"
+              onClick={() => {
+                setInput("");
+                textareaRef.current?.focus();
+              }}
+              aria-label="入力をクリア"
+              className="absolute right-4 top-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+            >
+              ×
+            </button>
+          )}
+        </div>
         <button
           type="submit"
           disabled={isLoading || !input.trim()}
-          className="shrink-0 px-5 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          className="shrink-0 px-5 py-2 border border-transparent bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >
           送信
         </button>
