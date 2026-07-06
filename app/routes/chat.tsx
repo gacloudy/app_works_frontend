@@ -170,7 +170,7 @@ export default function Chat() {
       </div>
 
       <div
-        className="flex-1 min-h-0 flex gap-6 p-2 pb-16 pt-16 relative bg-no-repeat bg-cover bg-center]"
+        className="flex-1 min-h-0 flex gap-6 py-2 pb-16 pt-16 relative bg-no-repeat bg-cover bg-center]"
         style={{ backgroundImage: "url(/background.png)" }}
       >
         {/* 画像分の横幅を確保するダミー要素（画像自体はabsoluteでフッターに重ねる） */}
@@ -181,17 +181,17 @@ export default function Chat() {
           className="hidden lg:block absolute left-5 top-[calc(4rem-5px)] h-[calc(100%-4rem)] w-auto object-contain z-50"
         />
 
-        <div className="flex-1 min-h-0 rounded-xl flex flex-col overflow-hidden h-[calc(100%-10px)] relative">
+        <div className="flex-1 min-h-0 rounded-xl flex flex-col overflow-hidden h-full relative">
           <img
             src={isTalking && talkFrame === 1 ? "/akane-chan-talk.png" : "/akane-chan.png"}
             alt="株本赤音ちゃん"
             className="lg:hidden absolute inset-0 w-full h-full object-cover object-top"
           />
-          <div className="lg:hidden absolute inset-0 bg-white/50 dark:bg-gray-900/60" />
+          <div className="lg:hidden absolute inset-0 bg-white/50 " />
           <div className="relative z-10 flex-1 overflow-y-auto py-6 pb-24 space-y-4">
             {messages.length === 0 ? (
               <div className="text-gray-700 text-lg text-center py-12">
-                赤音ちゃんに、銘柄の売り時・買い時などを質問してみよう！！
+                　赤音ちゃんに、銘柄の売り時・買い時などを<br />質問してみよう！！　
               </div>
             ) : (
               messages.map((m, i) => (
@@ -225,7 +225,7 @@ export default function Chat() {
 
       <form
         onSubmit={handleSubmit}
-        className="lg:rounded-lg fixed lg:bottom-2 bottom-0  left-0 right-0 lg:left-[14rem] lg:right-2 z-10 bg-gray-400 border-t border-gray-300 dark:border-gray-700 p-3 flex items-end gap-2"
+        className="lg:rounded-lg fixed lg:bottom-2 bottom-0  left-0 right-0 lg:left-[14rem] lg:right-2 z-10 bg-gray-400 border-t border-gray-300 dark:border-gray-700 p-3 flex items-start gap-2"
       >
         <div className="relative flex-1">
           <textarea
