@@ -165,7 +165,7 @@ export default function Chat() {
           disabled={messages.length === 0 || isLoading}
           className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >
-          ×リセット
+          × リセット
         </button>
       </div>
 
@@ -202,8 +202,8 @@ export default function Chat() {
                   <div
                     className={`max-w-[80%] px-4 py-2.5 rounded-2xl text-sm whitespace-pre-wrap break-words ${
                       m.role === "user"
-                        ? "bg-blue-600 text-white rounded-br-sm mr-2"
-                        : "bg-pink-700 text-white rounded-bl-sm ml-2"
+                        ? "bg-blue-600 text-white rounded-br-sm"
+                        : "bg-pink-700 text-white rounded-bl-sm"
                     }`}
                   >
                     {m.content}
@@ -211,10 +211,14 @@ export default function Chat() {
                 </div>
               ))
             )}
+            
             {isLoading && (
               <div className="flex items-end gap-2 justify-start">
-                <div className="max-w-[80%] px-4 py-2.5 rounded-2xl rounded-bl-sm text-sm bg-pink-700 text-white">
-                  えっと...
+                <div className="max-w-[80%] px-4 py-3 rounded-2xl rounded-bl-sm bg-pink-700 text-white flex items-center gap-1">
+                  えっと
+                  <span className="w-2 h-2 rounded-full bg-white animate-bounce [animation-delay:0ms]" />
+                  <span className="w-2 h-2 rounded-full bg-white animate-bounce [animation-delay:150ms]" />
+                  <span className="w-2 h-2 rounded-full bg-white animate-bounce [animation-delay:300ms]" />
                 </div>
               </div>
             )}
