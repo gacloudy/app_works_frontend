@@ -4,7 +4,7 @@ import type { Route } from "./+types/chat";
 import { backendFetch } from "../utils/backend.server";
 
 export function meta() {
-  return [{ title: "チャット | 株価分析" }];
+  return [{ title: "株本赤音ちゃん" }];
 }
 
 interface ChatMessage {
@@ -181,8 +181,14 @@ export default function Chat() {
           className="hidden lg:block absolute left-5 top-[calc(4rem-5px)] h-[calc(100%-4rem)] w-auto object-contain z-50"
         />
 
-        <div className="flex-1 min-h-0 rounded-xl flex flex-col overflow-hidden h-[calc(100%-10px)]">
-          <div className="flex-1 overflow-y-auto py-6 pb-24 space-y-4">
+        <div className="flex-1 min-h-0 rounded-xl flex flex-col overflow-hidden h-[calc(100%-10px)] relative">
+          <img
+            src={isTalking && talkFrame === 1 ? "/akane-chan-talk.png" : "/akane-chan.png"}
+            alt="株本赤音ちゃん"
+            className="lg:hidden absolute inset-0 w-full h-full object-cover object-top"
+          />
+          <div className="lg:hidden absolute inset-0 bg-white/50 dark:bg-gray-900/60" />
+          <div className="relative z-10 flex-1 overflow-y-auto py-6 pb-24 space-y-4">
             {messages.length === 0 ? (
               <div className="text-gray-700 text-lg text-center py-12">
                 赤音ちゃんに、銘柄の売り時・買い時などを質問してみよう！！
@@ -193,13 +199,6 @@ export default function Chat() {
                   key={i}
                   className={`flex items-end gap-2 ${m.role === "user" ? "justify-end" : "justify-start"}`}
                 >
-                  {m.role === "assistant" && (
-                    <img
-                      src="/akane-chan-icon.png"
-                      alt="株本赤音ちゃん"
-                      className="lg:hidden w-12 h-12 rounded-full object-cover border border-gray-300 dark:border-gray-600 shrink-0 z-50"
-                    />
-                  )}
                   <div
                     className={`max-w-[80%] px-4 py-2.5 rounded-2xl text-sm whitespace-pre-wrap break-words ${
                       m.role === "user"
@@ -214,11 +213,6 @@ export default function Chat() {
             )}
             {isLoading && (
               <div className="flex items-end gap-2 justify-start">
-                <img
-                  src="/akane-chan-icon.png"
-                  alt="株本赤音ちゃん"
-                  className="lg:hidden w-12 h-12 rounded-full object-cover border border-gray-300 dark:border-gray-600 shrink-0 z-50"
-                />
                 <div className="max-w-[80%] px-4 py-2.5 rounded-2xl rounded-bl-sm text-sm bg-pink-700 text-white">
                   えっと...
                 </div>
