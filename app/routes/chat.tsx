@@ -4,7 +4,7 @@ import type { Route } from "./+types/chat";
 import { backendFetch } from "../utils/backend.server";
 
 export function meta() {
-  return [{ title: "株本赤音ちゃん" }];
+  return [{ title: "株本茜ちゃん" }];
 }
 
 interface ChatMessage {
@@ -157,7 +157,7 @@ export default function Chat() {
     <div className="flex flex-col h-screen overflow-hidden bg-gray-100 dark:bg-gray-900">
       <div className="fixed top-0 inset-x-0 z-30 h-16 flex items-center justify-between bg-black px-6">
         <h2 className="text-xl font-bold text-white">
-          💸株本赤音ちゃん💸
+          💸株本茜ちゃん💸
         </h2>
         <button
           type="button"
@@ -177,21 +177,21 @@ export default function Chat() {
         <div className="hidden lg:block w-48 shrink-0" />
         <img
           src={isTalking && talkFrame === 1 ? "/akane-chan-talk.png" : "/akane-chan.png"}
-          alt="株本赤音ちゃん"
+          alt="株本茜ちゃん"
           className="hidden lg:block absolute left-5 top-[calc(4rem-5px)] h-[calc(100%-4rem)] w-auto object-contain z-50"
         />
 
         <div className="flex-1 min-h-0 rounded-xl flex flex-col overflow-hidden h-full relative">
           <img
             src={isTalking && talkFrame === 1 ? "/akane-chan-talk.png" : "/akane-chan.png"}
-            alt="株本赤音ちゃん"
+            alt="株本茜ちゃん"
             className="lg:hidden absolute inset-0 w-full h-full object-cover object-top"
           />
           <div className="lg:hidden absolute inset-0 bg-white/50 " />
           <div className="relative z-10 flex-1 overflow-y-auto px-2 py-6 pb-24 space-y-4">
             {messages.length === 0 ? (
               <div className="text-gray-700 text-lg text-center py-12">
-                　赤音ちゃんに、銘柄の売り時・買い時などを<br />質問してみよう！！　
+                　茜ちゃんに、銘柄の売り時・買い時などを<br />質問してみよう！！　
               </div>
             ) : (
               messages.map((m, i) => (
@@ -239,8 +239,8 @@ export default function Chat() {
             onKeyDown={handleTextareaKeyDown}
             maxLength={200}
             rows={1}
-            placeholder="例: トヨタ自動車は今売り時ですか?"
-            className="w-full resize-none break-words leading-5 overflow-y-auto pl-4 pr-10 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-base lg:text-sm bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="例: トヨタ自動車は今買い時ですか？"
+            className="w-full resize-none break-words leading-5 overflow-y-auto pl-4 pr-10 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-base lg:text-sm bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 placeholder-gray-400 placeholder:text-sm lg:placeholder:text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
           {input && (
             <button
