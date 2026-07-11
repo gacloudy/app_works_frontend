@@ -7,9 +7,15 @@ export function meta() {
   return [{ title: "株本茜ちゃん" }];
 }
 
+interface StockCandidate {
+  code: string;
+  name: string;
+}
+
 interface ChatMessage {
   role: "user" | "assistant";
   content: string;
+  candidates?: StockCandidate[];
 }
 
 export async function action({ request }: Route.ActionArgs) {
@@ -20,15 +26,18 @@ export async function action({ request }: Route.ActionArgs) {
   const res = await backendFetch("/api/v1/chat", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ message, history }),
+    body: JSON.stringify({
+      message,
+      history: history.map(({ role, content }) => ({ role, content })),
+    }),
   });
 
   if (!res.ok) {
     return { reply: "エラーが発生しました。しばらくしてから再度お試しください。" };
   }
 
-  const data: { reply: string } = await res.json();
-  return { reply: data.reply };
+  const data: { reply: string; candidates?: StockCandidate[] } = await res.json();
+  return { reply: data.reply, candidates: data.candidates };
 }
 
 const TALK_SWAP_INTERVAL_MS = 500;
@@ -47,16 +56,16 @@ export default function Chat() {
 
   const isLoading = fetcher.state !== "idle";
 
-  function submitMessage() {
-    const text = input.trim();
+  function submitMessage(overrideText?: string, sendText?: string) {
+    const text = (overrideText ?? input).trim();
     if (!text || isLoading) return;
 
     const historyForRequest = messages;
     setMessages((prev) => [...prev, { role: "user", content: text }]);
-    setInput("");
+    if (overrideText === undefined) setInput("");
 
     fetcher.submit(
-      { message: text, history: JSON.stringify(historyForRequest) },
+      { message: (sendText ?? text).trim(), history: JSON.stringify(historyForRequest) },
       { method: "post" }
     );
   }
@@ -81,7 +90,14 @@ export default function Chat() {
         if (last?.role === "assistant" && last.content === fetcher.data!.reply) {
           return prev;
         }
-        return [...prev, { role: "assistant", content: fetcher.data!.reply }];
+        return [
+          ...prev,
+          {
+            role: "assistant",
+            content: fetcher.data!.reply,
+            candidates: fetcher.data!.candidates,
+          },
+        ];
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -199,14 +215,31 @@ export default function Chat() {
                   key={i}
                   className={`flex items-end gap-2 ${m.role === "user" ? "justify-end" : "justify-start"}`}
                 >
-                  <div
-                    className={`max-w-[80%] px-4 py-2.5 rounded-2xl text-sm whitespace-pre-wrap break-words ${
-                      m.role === "user"
-                        ? "bg-blue-600 text-white rounded-br-sm"
-                        : "bg-pink-700 text-white rounded-bl-sm"
-                    }`}
-                  >
-                    {m.content}
+                  <div className="flex flex-col gap-2 max-w-[80%]">
+                    <div
+                      className={`px-4 py-2.5 rounded-2xl text-sm whitespace-pre-wrap break-words ${
+                        m.role === "user"
+                          ? "bg-blue-600 text-white rounded-br-sm"
+                          : "bg-pink-700 text-white rounded-bl-sm"
+                      }`}
+                    >
+                      {m.content}
+                    </div>
+                    {m.candidates && m.candidates.length > 0 && (
+                      <div className="flex flex-wrap gap-2">
+                        {m.candidates.map((c) => (
+                          <button
+                            key={c.code}
+                            type="button"
+                            onClick={() => submitMessage(`${c.name}（${c.code}）`, c.code)}
+                            disabled={isLoading}
+                            className="px-3 py-1.5 rounded-full border border-pink-700 dark:border-pink-400 text-pink-700 dark:text-pink-300 bg-white dark:bg-gray-800 text-xs font-medium hover:bg-pink-700 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                          >
+                            {c.name}（{c.code}）
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
               ))
