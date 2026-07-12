@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useFetcher } from "react-router";
 import type { Route } from "./+types/chat";
 import { backendFetch } from "../utils/backend.server";
+import { StockPriceChart } from "../components/StockPriceChart";
 
 export function meta() {
   return [{ title: "株本茜ちゃん" }];
@@ -16,12 +17,18 @@ interface ChatMessage {
   role: "user" | "assistant";
   content: string;
   candidates?: StockCandidate[];
+  showChart?: boolean;
+  chartCode?: string;
 }
 
 export async function action({ request }: Route.ActionArgs) {
   const formData = await request.formData();
   const message = String(formData.get("message") ?? "");
   const history: ChatMessage[] = JSON.parse(String(formData.get("history") ?? "[]"));
+  const selectedStockRaw = formData.get("selectedStock");
+  const selectedStock: StockCandidate | null = selectedStockRaw
+    ? JSON.parse(String(selectedStockRaw))
+    : null;
 
   const res = await backendFetch("/api/v1/chat", {
     method: "POST",
@@ -29,6 +36,7 @@ export async function action({ request }: Route.ActionArgs) {
     body: JSON.stringify({
       message,
       history: history.map(({ role, content }) => ({ role, content })),
+      selected_stock: selectedStock,
     }),
   });
 
@@ -36,8 +44,18 @@ export async function action({ request }: Route.ActionArgs) {
     return { reply: "エラーが発生しました。しばらくしてから再度お試しください。" };
   }
 
-  const data: { reply: string; candidates?: StockCandidate[] } = await res.json();
-  return { reply: data.reply, candidates: data.candidates };
+  const data: {
+    reply: string;
+    candidates?: StockCandidate[];
+    selected_stock?: StockCandidate;
+    show_chart?: boolean;
+  } = await res.json();
+  return {
+    reply: data.reply,
+    candidates: data.candidates,
+    selectedStock: data.selected_stock,
+    showChart: data.show_chart ?? false,
+  };
 }
 
 const TALK_SWAP_INTERVAL_MS = 500;
@@ -46,6 +64,7 @@ const MAX_TEXTAREA_LINES = 5;
 export default function Chat() {
   const fetcher = useFetcher<typeof action>();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [selectedStock, setSelectedStock] = useState<StockCandidate | null>(null);
   const [input, setInput] = useState("");
   const [isTalking, setIsTalking] = useState(false);
   const [talkFrame, setTalkFrame] = useState<0 | 1>(0);
@@ -65,7 +84,11 @@ export default function Chat() {
     if (overrideText === undefined) setInput("");
 
     fetcher.submit(
-      { message: (sendText ?? text).trim(), history: JSON.stringify(historyForRequest) },
+      {
+        message: (sendText ?? text).trim(),
+        history: JSON.stringify(historyForRequest),
+        ...(selectedStock ? { selectedStock: JSON.stringify(selectedStock) } : {}),
+      },
       { method: "post" }
     );
   }
@@ -96,9 +119,16 @@ export default function Chat() {
             role: "assistant",
             content: fetcher.data!.reply,
             candidates: fetcher.data!.candidates,
+            showChart: fetcher.data!.showChart,
+            chartCode: fetcher.data!.selectedStock?.code,
           },
         ];
       });
+      // 銘柄が新たに確定した（または切り替わった）レスポンスでのみ selectedStock が
+      // 返ってくるので、その場合だけキャッシュを更新する。
+      if (fetcher.data.selectedStock) {
+        setSelectedStock(fetcher.data.selectedStock);
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fetcher.data, fetcher.state]);
@@ -167,14 +197,20 @@ export default function Chat() {
   function handleReset() {
     setMessages([]);
     setInput("");
+    setSelectedStock(null);
   }
 
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-gray-100 dark:bg-gray-900">
-      <div className="fixed top-0 inset-x-0 z-30 h-16 flex items-center justify-between bg-black px-6">
-        <h2 className="text-xl font-bold text-white">
+      <div className="fixed top-0 inset-x-0 z-30 h-16 flex items-center justify-between gap-2 bg-black px-6">
+        <h2 className="text-xl font-bold text-white shrink-0">
           💸株本茜ちゃん💸
         </h2>
+        {selectedStock && (
+          <div className="flex items-center gap-1 min-w-0 px-3 py-1.5 rounded-full bg-pink-700 text-white text-xs font-medium">
+            <span className="truncate">{selectedStock.name}（{selectedStock.code}）</span>
+          </div>
+        )}
         <button
           type="button"
           onClick={handleReset}
@@ -211,36 +247,42 @@ export default function Chat() {
               </div>
             ) : (
               messages.map((m, i) => (
-                <div
-                  key={i}
-                  className={`flex items-end gap-2 ${m.role === "user" ? "justify-end" : "justify-start"}`}
-                >
-                  <div className="flex flex-col gap-2 max-w-[80%]">
-                    <div
-                      className={`px-4 py-2.5 rounded-2xl text-sm whitespace-pre-wrap break-words ${
-                        m.role === "user"
-                          ? "bg-blue-600 text-white rounded-br-sm"
-                          : "bg-pink-700 text-white rounded-bl-sm"
-                      }`}
-                    >
-                      {m.content}
-                    </div>
-                    {m.candidates && m.candidates.length > 0 && (
-                      <div className="flex flex-wrap gap-2">
-                        {m.candidates.map((c) => (
-                          <button
-                            key={c.code}
-                            type="button"
-                            onClick={() => submitMessage(`${c.name}（${c.code}）`, c.code)}
-                            disabled={isLoading}
-                            className="px-3 py-1.5 rounded-full border border-pink-700 dark:border-pink-400 text-pink-700 dark:text-pink-300 bg-white dark:bg-gray-800 text-xs font-medium hover:bg-pink-700 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                          >
-                            {c.name}（{c.code}）
-                          </button>
-                        ))}
+                <div key={i}>
+                  <div
+                    className={`flex items-end gap-2 ${m.role === "user" ? "justify-end" : "justify-start"}`}
+                  >
+                    <div className={`flex flex-col gap-2 ${m.role === "user" ? "max-w-[80%]" : "max-w-[95%]"}`}>
+                      <div
+                        className={`px-4 py-2.5 rounded-2xl text-sm whitespace-pre-wrap break-words ${
+                          m.role === "user"
+                            ? "bg-blue-600 text-white rounded-br-sm"
+                            : "bg-pink-700 text-white rounded-bl-sm"
+                        }`}
+                      >
+                        {m.content}
                       </div>
-                    )}
+                      {m.candidates && m.candidates.length > 0 && (
+                        <div className="flex flex-wrap gap-2">
+                          {m.candidates.map((c) => (
+                            <button
+                              key={c.code}
+                              type="button"
+                              onClick={() => submitMessage(`${c.name}（${c.code}）`, c.code)}
+                              disabled={isLoading}
+                              className="px-3 py-1.5 rounded-full border border-pink-700 dark:border-pink-400 text-pink-700 dark:text-pink-300 bg-white dark:bg-gray-800 text-xs font-medium hover:bg-pink-700 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                            >
+                              {c.name}（{c.code}）
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   </div>
+                  {m.showChart && m.chartCode && (
+                    <div className="mt-1 w-[95%] bg-white dark:bg-gray-800 rounded-xl p-2 border border-gray-200 dark:border-gray-700">
+                      <StockPriceChart initialCode={m.chartCode} priceHeight={200} volumeHeight={80} />
+                    </div>
+                  )}
                 </div>
               ))
             )}
