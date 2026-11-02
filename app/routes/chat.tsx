@@ -60,6 +60,28 @@ export async function action({ request }: Route.ActionArgs) {
 
 const TALK_SWAP_INTERVAL_MS = 500;
 const MAX_TEXTAREA_LINES = 5;
+// この時間だけ新しい音声認識結果が来なければ「話し終わった」とみなして自動送信する
+const SILENCE_AUTO_SEND_MS = 2000;
+
+// Web Speech API はブラウザ標準の型定義に含まれていないため、使う分だけ最小限に型を定義する。
+interface SpeechRecognitionResultEvent extends Event {
+  resultIndex: number;
+  results: {
+    [index: number]: { [index: number]: { transcript: string }; isFinal: boolean };
+    length: number;
+  };
+}
+
+interface SpeechRecognitionInstance extends EventTarget {
+  lang: string;
+  continuous: boolean;
+  interimResults: boolean;
+  start(): void;
+  stop(): void;
+  onresult: ((event: SpeechRecognitionResultEvent) => void) | null;
+  onend: (() => void) | null;
+  onerror: (() => void) | null;
+}
 
 export default function Chat() {
   const fetcher = useFetcher<typeof action>();
@@ -68,16 +90,41 @@ export default function Chat() {
   const [input, setInput] = useState("");
   const [isTalking, setIsTalking] = useState(false);
   const [talkFrame, setTalkFrame] = useState<0 | 1>(0);
+  const [isListening, setIsListening] = useState(false);
+  const [speechSupported, setSpeechSupported] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const talkIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const talkTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
+  const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const finalTranscriptRef = useRef("");
+  const baseTextRef = useRef("");
+  const hasAutoSubmittedRef = useRef(false);
+  const isListeningRef = useRef(false);
+  // 音声認識のイベントハンドラはマウント時に一度だけ登録するため、常に最新の
+  // submitMessage を呼べるようrefで参照を持っておく（古いinput/isLoadingを
+  // 掴んだままのクロージャにならないようにするため）。
+  const submitMessageRef = useRef<(overrideText?: string, sendText?: string) => void>(() => {});
 
   const isLoading = fetcher.state !== "idle";
+
+  function stopListening() {
+    if (!isListeningRef.current) return;
+    if (silenceTimerRef.current) {
+      clearTimeout(silenceTimerRef.current);
+      silenceTimerRef.current = null;
+    }
+    isListeningRef.current = false;
+    setIsListening(false);
+    recognitionRef.current?.stop();
+  }
 
   function submitMessage(overrideText?: string, sendText?: string) {
     const text = (overrideText ?? input).trim();
     if (!text || isLoading) return;
+
+    if (isListeningRef.current) stopListening();
 
     const historyForRequest = messages;
     setMessages((prev) => [...prev, { role: "user", content: text }]);
@@ -194,6 +241,98 @@ export default function Chat() {
     };
   }, []);
 
+  // submitMessageRefを常に最新の submitMessage に同期させる（毎レンダー実行、代入だけなので軽量）。
+  useEffect(() => {
+    submitMessageRef.current = submitMessage;
+  });
+
+  // ブラウザのWeb Speech APIでマイク音声入力を扱う（未対応ブラウザではボタン自体を出さない）。
+  // continuous + interimResultsで聞き続け、新しい認識結果が SILENCE_AUTO_SEND_MS の間
+  // 来なければ「話し終わった」とみなして自動送信する。
+  useEffect(() => {
+    const Ctor =
+      (window as unknown as { SpeechRecognition?: new () => SpeechRecognitionInstance })
+        .SpeechRecognition ??
+      (window as unknown as { webkitSpeechRecognition?: new () => SpeechRecognitionInstance })
+        .webkitSpeechRecognition;
+    if (!Ctor) return;
+
+    setSpeechSupported(true);
+    const recognition = new Ctor();
+    recognition.lang = "ja-JP";
+    recognition.continuous = true;
+    recognition.interimResults = true;
+
+    recognition.onresult = (event) => {
+      if (hasAutoSubmittedRef.current) return;
+      if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+
+      let interim = "";
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const result = event.results[i];
+        if (result.isFinal) {
+          finalTranscriptRef.current += result[0].transcript;
+        } else {
+          interim += result[0].transcript;
+        }
+      }
+      setInput(`${baseTextRef.current}${finalTranscriptRef.current}${interim}`);
+
+      silenceTimerRef.current = setTimeout(() => {
+        hasAutoSubmittedRef.current = true;
+        isListeningRef.current = false;
+        setIsListening(false);
+        recognition.stop();
+
+        const text = `${baseTextRef.current}${finalTranscriptRef.current}`.trim();
+        if (text) {
+          submitMessageRef.current(text);
+          setInput("");
+        }
+      }, SILENCE_AUTO_SEND_MS);
+    };
+    recognition.onend = () => {
+      isListeningRef.current = false;
+      setIsListening(false);
+      if (silenceTimerRef.current) {
+        clearTimeout(silenceTimerRef.current);
+        silenceTimerRef.current = null;
+      }
+    };
+    recognition.onerror = () => {
+      isListeningRef.current = false;
+      setIsListening(false);
+      if (silenceTimerRef.current) {
+        clearTimeout(silenceTimerRef.current);
+        silenceTimerRef.current = null;
+      }
+    };
+    recognitionRef.current = recognition;
+
+    return () => {
+      if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+      recognition.onresult = null;
+      recognition.onend = null;
+      recognition.onerror = null;
+      recognition.stop();
+    };
+  }, []);
+
+  function toggleListening() {
+    const recognition = recognitionRef.current;
+    if (!recognition || isLoading) return;
+    if (isListeningRef.current) {
+      stopListening();
+    } else {
+      baseTextRef.current = input;
+      finalTranscriptRef.current = "";
+      hasAutoSubmittedRef.current = false;
+      isListeningRef.current = true;
+      setIsListening(true);
+      recognition.start();
+    }
+  }
+
   function handleReset() {
     setMessages([]);
     setInput("");
@@ -302,6 +441,14 @@ export default function Chat() {
         </div>
       </div>
 
+      {isListening && (
+        <div className="fixed lg:bottom-[4.75rem] bottom-[3.75rem] left-0 right-0 lg:left-[14rem] lg:right-2 z-10 flex justify-center pointer-events-none">
+          <span className="px-3 py-1 rounded-full bg-red-600/90 text-white text-xs shadow">
+            🎤 聞いています…（2秒話が止まると自動で送信します）
+          </span>
+        </div>
+      )}
+
       <form
         onSubmit={handleSubmit}
         className="lg:rounded-lg fixed lg:bottom-2 bottom-0  left-0 right-0 lg:left-[14rem] lg:right-2 z-10 bg-gray-400 border-t border-gray-300 dark:border-gray-700 p-3 flex items-start gap-2"
@@ -331,6 +478,25 @@ export default function Chat() {
             </button>
           )}
         </div>
+        {speechSupported && (
+          <button
+            type="button"
+            onClick={toggleListening}
+            disabled={isLoading}
+            aria-label={isListening ? "音声入力を停止" : "音声入力を開始"}
+            aria-pressed={isListening}
+            className={`shrink-0 p-2.5 rounded-lg border transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+              isListening
+                ? "bg-red-600 border-transparent text-white animate-pulse"
+                : "bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+            }`}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
+              <path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 1 0-6 0v6a3 3 0 0 0 3 3Z" />
+              <path d="M19 11a1 1 0 1 0-2 0 5 5 0 0 1-10 0 1 1 0 1 0-2 0 7 7 0 0 0 6 6.93V20H9a1 1 0 1 0 0 2h6a1 1 0 1 0 0-2h-2v-2.07A7 7 0 0 0 19 11Z" />
+            </svg>
+          </button>
+        )}
         <button
           type="submit"
           disabled={isLoading || !input.trim()}
