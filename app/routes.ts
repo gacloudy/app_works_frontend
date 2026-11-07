@@ -6,6 +6,7 @@ export default [
   layout("routes/layout.tsx", [
     route("dashboard", "routes/dashboard.tsx"),
     route("picks", "routes/picks.tsx"),
+    route("track-record", "routes/track-record.tsx"),
     route("market", "routes/market.tsx"),
     route("disclosures", "routes/disclosures.tsx"),
     route("stocks", "routes/stocks.tsx"),

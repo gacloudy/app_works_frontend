@@ -1,25 +1,10 @@
 import { Link, useLoaderData, useNavigate } from "react-router";
 import { backendFetch } from "../utils/backend.server";
 import { SIGNAL_LABELS } from "../utils/signals";
+import { fmtDate, Pct, PickOutcome, type Pick } from "../components/PickOutcome";
 
 export function meta() {
   return [{ title: "今日の売買サイン | 株価分析" }];
-}
-
-interface Pick {
-  rank: number;
-  code: string;
-  name: string | null;
-  industry: string | null;
-  signal_type: string;
-  side: "buy" | "sell";
-  close_price: string;
-  hold_days: number;
-  past_count: number;
-  past_win_rate: string;
-  past_avg: string;
-  all_stocks_avg: string | null;
-  is_live: boolean;
 }
 
 interface DayPicks {
@@ -36,19 +21,6 @@ export async function loader({ request }: { request: Request }) {
 }
 
 const card = "bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700";
-
-function fmtDate(iso: string): string {
-  const d = new Date(iso);
-  const w = "日月火水木金土"[d.getDay()];
-  return `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()}（${w}）`;
-}
-
-function Pct({ v }: { v: string | null }) {
-  if (v === null) return <span className="text-gray-400">—</span>;
-  const n = parseFloat(v);
-  const color = n > 0 ? "text-emerald-600 dark:text-emerald-400" : n < 0 ? "text-rose-600 dark:text-rose-400" : "text-gray-500";
-  return <span className={`tabular-nums ${color}`}>{`${n > 0 ? "+" : ""}${n.toFixed(1)}%`}</span>;
-}
 
 function PickCard({ p }: { p: Pick }) {
   const isBuy = p.side === "buy";
@@ -100,6 +72,10 @@ function PickCard({ p }: { p: Pick }) {
         <dt className="text-gray-500 dark:text-gray-400">全銘柄の平均</dt>
         <dd className="text-right"><Pct v={p.all_stocks_avg} /></dd>
       </dl>
+
+      <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
+        <PickOutcome p={p} />
+      </div>
 
       <div className="mt-auto pt-3 flex items-center justify-between">
         {!p.is_live ? (
