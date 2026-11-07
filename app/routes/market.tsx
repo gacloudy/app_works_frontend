@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useLoaderData } from "react-router";
 import { createChart, ColorType, LineSeries, LineStyle } from "lightweight-charts";
 import { backendFetch } from "../utils/backend.server";
+import { SIGNAL_LABELS } from "../utils/signals";
 
 export function meta() {
   return [{ title: "地合い・業種 | 株価分析" }];
@@ -76,16 +77,6 @@ export async function loader() {
     momentumStats: momentumStats as MomentumStats[],
   };
 }
-
-const SIGNAL_LABELS: Record<string, string> = {
-  golden_cross: "ゴールデンクロス",
-  dead_cross: "デッドクロス",
-  rsi_oversold: "RSI 売られすぎ",
-  rsi_overbought: "RSI 買われすぎ",
-  bb_lower_touch: "BB 下限タッチ",
-  bb_upper_touch: "BB 上限タッチ",
-  volume_surge_up: "出来高急増＋上昇",
-};
 
 const REGIME_LABELS: Record<string, { label: string; badge: string }> = {
   strong: { label: "強い", badge: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300" },

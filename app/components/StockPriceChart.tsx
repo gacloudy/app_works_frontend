@@ -6,8 +6,14 @@ import {
   HistogramSeries,
   LineSeries,
   ColorType,
+  createSeriesMarkers,
   type IChartApi,
+  type SeriesMarker,
+  type Time,
 } from "lightweight-charts";
+
+/** チャート上に表示する目印（シグナルの発生日など）。time は "YYYY-MM-DD"。 */
+export type ChartMarker = SeriesMarker<Time>;
 
 export interface PriceRecord {
   code: string;
@@ -34,6 +40,7 @@ const PERIOD_OPTIONS = [
   { label: "90営業日",  days: 90  },
   { label: "180営業日", days: 180 },
   { label: "1年",       days: 252 },
+  { label: "2年",       days: 520 },
 ] as const;
 
 const MA_OPTIONS = [0, ...Array.from({ length: 50 }, (_, i) => i + 1)]; // 0 = なし
@@ -63,6 +70,8 @@ interface StockPriceChartProps {
   stocks?: StockOption[];
   priceHeight?: number;
   volumeHeight?: number;
+  /** 株価チャートに重ねる目印（表示期間外のものは無視される）。 */
+  markers?: ChartMarker[];
 }
 
 const selectClass =
@@ -82,6 +91,7 @@ export function StockPriceChart({
   stocks,
   priceHeight = 360,
   volumeHeight = 140,
+  markers,
 }: StockPriceChartProps) {
   const [code, setCode] = useState(initialCode);
   const [days, setDays] = useState(initialDays);
@@ -143,6 +153,8 @@ export function StockPriceChart({
       (d) => d.open_price !== null && d.high_price !== null && d.low_price !== null
     );
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let mainSeries: any;
     if (hasOhlc) {
       const candle = priceChart.addSeries(CandlestickSeries, {
         upColor: "#26a69a",
@@ -162,12 +174,25 @@ export function StockPriceChart({
             close: parseFloat(d.current_price!),
           }))
       );
+      mainSeries = candle;
     } else {
       const line = priceChart.addSeries(LineSeries, { color: "#3b82f6", lineWidth: 2 });
       line.setData(
         history
           .filter((d) => d.current_price !== null)
           .map((d) => ({ time: d.trade_date, value: parseFloat(d.current_price!) }))
+      );
+      mainSeries = line;
+    }
+
+    if (markers?.length) {
+      // 表示中の期間にある日付の目印だけを、日付の昇順で渡す（ライブラリの要件）
+      const shown = new Set(history.map((d) => d.trade_date));
+      createSeriesMarkers(
+        mainSeries,
+        markers
+          .filter((m) => shown.has(String(m.time)))
+          .sort((a, b) => String(a.time).localeCompare(String(b.time)))
       );
     }
 
@@ -227,7 +252,7 @@ export function StockPriceChart({
       maSeriesRefs.current = [null, null, null];
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [history, priceHeight, volumeHeight]);
+  }, [history, priceHeight, volumeHeight, markers]);
 
   // ── 移動平均線: maSettings か history が変わった時に差し替え
   useEffect(() => {
